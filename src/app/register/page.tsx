@@ -64,7 +64,7 @@ export default function RegisterPage() {
       
       localStorage.setItem('moneyflow_authenticated', 'true');
       localStorage.setItem('moneyflow_username', username.trim());
-      router.replace('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err) {
       console.error(err);
       setError('Gagal menghubungi server database.');

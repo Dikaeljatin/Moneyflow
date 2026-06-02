@@ -43,14 +43,14 @@ export default function GoalsPage() {
     setConfirmDialog({
       isOpen: true,
       type: 'save',
-      data: data,
+      data: { ...data, id: editData?.id },
     });
   };
 
   const confirmSave = () => {
     if (confirmDialog.data) {
-      if (editData) {
-        updateGoal(editData.id, confirmDialog.data);
+      if (confirmDialog.data.id) {
+        updateGoal(confirmDialog.data.id, confirmDialog.data);
       } else {
         addGoal(confirmDialog.data);
       }

@@ -33,7 +33,7 @@ export default function LoginPage() {
       } else {
         localStorage.setItem('moneyflow_authenticated', 'true');
         localStorage.setItem('moneyflow_username', user.username);
-        router.replace('/dashboard');
+        window.location.href = '/dashboard';
       }
     } catch (err) {
       console.error(err);

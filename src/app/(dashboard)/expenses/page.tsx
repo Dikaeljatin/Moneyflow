@@ -51,14 +51,14 @@ export default function ExpensesPage() {
     setConfirmDialog({
       isOpen: true,
       type: 'save',
-      data: data,
+      data: { ...data, id: editData?.id },
     });
   };
 
   const confirmSave = () => {
     if (confirmDialog.data) {
-      if (editData) {
-        updateTransaction(editData.id, confirmDialog.data);
+      if (confirmDialog.data.id) {
+        updateTransaction(confirmDialog.data.id, confirmDialog.data);
       } else {
         addTransaction(confirmDialog.data);
       }
