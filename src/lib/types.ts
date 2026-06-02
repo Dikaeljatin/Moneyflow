@@ -25,6 +25,7 @@ export interface Transaction {
   description: string;
   date: string; // ISO date string (YYYY-MM-DD)
   createdAt: string; // ISO datetime string
+  username?: string; // Optional for backward compatibility, but required for new data
 }
 
 export interface FinancialGoal {
@@ -35,6 +36,7 @@ export interface FinancialGoal {
   deadline: string; // ISO date string
   color: string;
   createdAt: string;
+  username?: string; // Optional for backward compatibility
 }
 
 export interface MonthlyData {

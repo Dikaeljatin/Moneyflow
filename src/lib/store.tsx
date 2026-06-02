@@ -26,6 +26,7 @@ function dbGoalToApp(row: any): FinancialGoal {
     deadline: row.deadline ?? '',
     color: row.color ?? '',
     createdAt: row.createdat ?? row.createdAt ?? '',
+    username: row.username ?? '',
   };
 }
 
@@ -39,6 +40,7 @@ function dbTxToApp(row: any): Transaction {
     description: row.description ?? '',
     date: row.date,
     createdAt: row.createdat ?? row.createdAt ?? '',
+    username: row.username ?? '',
   };
 }
 
@@ -49,6 +51,18 @@ function goalToDb(g: Partial<FinancialGoal>): Record<string, unknown> {
   if (g.currentAmount !== undefined) row.currentamount = g.currentAmount;
   if (g.deadline !== undefined) row.deadline = g.deadline;
   if (g.color !== undefined) row.color = g.color;
+  if (g.username !== undefined) row.username = g.username;
+  return row;
+}
+
+function txToDb(t: Partial<Transaction>): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  if (t.type !== undefined) row.type = t.type;
+  if (t.amount !== undefined) row.amount = t.amount;
+  if (t.category !== undefined) row.category = t.category;
+  if (t.description !== undefined) row.description = t.description;
+  if (t.date !== undefined) row.date = t.date;
+  if (t.username !== undefined) row.username = t.username;
   return row;
 }
 
@@ -59,6 +73,7 @@ interface FinanceContextType {
   transactions: Transaction[];
   goals: FinancialGoal[];
   isLoaded: boolean;
+  currentUser: string | null;
 
   // Computed
   totalBalance: number;
@@ -85,12 +100,22 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
 
   // Load from Supabase on mount
   useEffect(() => {
+    // Get logged in user from localStorage
+    const username = typeof window !== 'undefined' ? localStorage.getItem('moneyflow_username') : null;
+    setCurrentUser(username);
+    
+    if (!username) {
+      setIsLoaded(true);
+      return;
+    }
+
     Promise.all([
-      supabase.from('transactions').select('*').order('date', { ascending: false }),
-      supabase.from('goals').select('*').order('createdat', { ascending: true })
+      supabase.from('transactions').select('*').eq('username', username).order('date', { ascending: false }),
+      supabase.from('goals').select('*').eq('username', username).order('createdat', { ascending: true })
     ])
       .then(([{ data: txData, error: txError }, { data: goalsData, error: goalsError }]) => {
         if (txError) console.error('Failed to load transactions:', txError);
@@ -132,8 +157,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const addTransaction = useCallback(
     async (t: Omit<Transaction, 'id' | 'createdAt'>) => {
+      if (!currentUser) return;
       try {
-        const { data, error } = await supabase.from('transactions').insert([t]).select().single();
+        const dbRow = txToDb({ ...t, username: currentUser });
+        const { data, error } = await supabase.from('transactions').insert([dbRow]).select().single();
         if (error) throw error;
         if (data) {
           setTransactions((prev) => [dbTxToApp(data), ...prev]);
@@ -142,7 +169,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         console.error('Failed to add transaction:', e);
       }
     },
-    []
+    [currentUser]
   );
 
   const updateTransaction = useCallback(
@@ -151,7 +178,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
       );
       try {
-        const { error } = await supabase.from('transactions').update(updates).eq('id', id);
+        const dbRow = txToDb(updates);
+        const { error } = await supabase.from('transactions').update(dbRow).eq('id', id);
         if (error) throw error;
       } catch (e) {
         console.error('Failed to update transaction:', e);
@@ -174,8 +202,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const addGoal = useCallback(
     async (g: Omit<FinancialGoal, 'id' | 'createdAt'>) => {
+      if (!currentUser) return;
       try {
-        const dbRow = goalToDb(g);
+        const dbRow = goalToDb({ ...g, username: currentUser });
         const { data, error } = await supabase.from('goals').insert([dbRow]).select().single();
         if (error) throw error;
         if (data) {
@@ -185,7 +214,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         console.error('Failed to add goal:', e);
       }
     },
-    []
+    [currentUser]
   );
 
   const updateGoal = useCallback(
@@ -239,6 +268,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     transactions,
     goals,
     isLoaded,
+    currentUser,
     totalBalance,
     totalIncome,
     totalExpense,
