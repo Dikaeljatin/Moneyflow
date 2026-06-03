@@ -21,14 +21,17 @@ export default function LoginPage() {
     }
 
     try {
-      const { data: user, error } = await supabase
+      const { data: user, error: queryError } = await supabase
         .from('users')
         .select('*')
         .eq('username', identifier.trim())
         .eq('password', password)
-        .single();
+        .maybeSingle();
       
-      if (error || !user) {
+      if (queryError) {
+        console.error('Login query error:', queryError);
+        setError(`Gagal login: ${queryError.message}`);
+      } else if (!user) {
         setError('Username atau password salah.');
       } else {
         localStorage.setItem('moneyflow_authenticated', 'true');
@@ -36,8 +39,8 @@ export default function LoginPage() {
         window.location.href = '/dashboard';
       }
     } catch (err) {
-      console.error(err);
-      setError('Gagal menghubungi server database.');
+      console.error('Unexpected login error:', err);
+      setError('Terjadi kesalahan tak terduga. Coba lagi.');
     }
   };
 

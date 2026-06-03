@@ -34,11 +34,18 @@ export default function RegisterPage() {
 
     try {
       // Check if username already exists
-      const { data: existingUser } = await supabase
+      // Use .maybeSingle() instead of .single() to avoid throwing error when not found
+      const { data: existingUser, error: checkError } = await supabase
         .from('users')
         .select('id')
         .eq('username', username.trim())
-        .single();
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Check user error:', checkError);
+        setError(`Gagal memeriksa username: ${checkError.message}`);
+        return;
+      }
         
       if (existingUser) {
         setError('Username sudah terdaftar.');
@@ -51,15 +58,17 @@ export default function RegisterPage() {
       }]);
       
       if (insertError) {
-        throw insertError;
+        console.error('Insert error:', insertError);
+        setError(`Gagal membuat akun: ${insertError.message}`);
+        return;
       }
       
       localStorage.setItem('moneyflow_authenticated', 'true');
       localStorage.setItem('moneyflow_username', username.trim());
       window.location.href = '/dashboard';
     } catch (err) {
-      console.error(err);
-      setError('Gagal menghubungi server database.');
+      console.error('Unexpected error:', err);
+      setError('Terjadi kesalahan tak terduga. Coba lagi.');
     }
   };
 
