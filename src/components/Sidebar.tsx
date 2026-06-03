@@ -108,7 +108,7 @@ export default function Sidebar() {
       {/* Mobile Overlay */}
       {isMobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-md"
+          className="lg:hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
@@ -116,9 +116,9 @@ export default function Sidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 z-40 h-full w-[280px] bg-white border-r border-border
-          flex flex-col transition-transform duration-300 ease-out shadow-xl lg:shadow-none
-          lg:translate-x-0 lg:static lg:z-auto
+          fixed top-0 left-0 z-[60] h-screen w-4/5 max-w-[280px] bg-white border-r border-border
+          flex flex-col transition-transform duration-300 ease-out shadow-2xl lg:shadow-none
+          lg:translate-x-0 lg:static lg:z-auto lg:h-full lg:w-[280px]
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >

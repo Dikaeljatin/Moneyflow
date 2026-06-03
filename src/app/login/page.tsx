@@ -16,7 +16,7 @@ export default function LoginPage() {
     e.preventDefault();
     
     if (!identifier.trim() || !password.trim()) {
-      setError('Masukkan username/email dan password.');
+      setError('Masukkan username dan password.');
       return;
     }
 
@@ -24,12 +24,12 @@ export default function LoginPage() {
       const { data: user, error } = await supabase
         .from('users')
         .select('*')
-        .or(`username.eq.${identifier.trim()},email.eq.${identifier.trim()}`)
+        .eq('username', identifier.trim())
         .eq('password', password)
         .single();
       
       if (error || !user) {
-        setError('Username/Email atau password salah.');
+        setError('Username atau password salah.');
       } else {
         localStorage.setItem('moneyflow_authenticated', 'true');
         localStorage.setItem('moneyflow_username', user.username);
@@ -68,7 +68,7 @@ export default function LoginPage() {
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               className="w-full px-5 py-3.5 rounded-full bg-white border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 outline-none transition-all placeholder:text-slate-400 font-medium text-slate-900 text-sm"
-              placeholder="Email atau username"
+            placeholder="Username"
               required
             />
           </div>
@@ -83,7 +83,7 @@ export default function LoginPage() {
               required
             />
             <div className="text-left mt-3 px-2">
-              <a href="#" className="text-xs font-bold text-slate-700 hover:text-slate-900">Lupa sandi?</a>
+              <Link href="/forgot-password" className="text-xs font-bold text-slate-700 hover:text-slate-900">Lupa sandi?</Link>
             </div>
           </div>
 

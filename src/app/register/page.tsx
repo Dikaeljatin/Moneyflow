@@ -7,7 +7,6 @@ import AuthBackground from '@/components/AuthBackground';
 import { supabase } from '@/lib/supabase';
 
 export default function RegisterPage() {
-  const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -18,14 +17,8 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
 
-    if (!email.trim() || !username.trim() || !password.trim() || !confirmPassword.trim()) {
+    if (!username.trim() || !password.trim() || !confirmPassword.trim()) {
       setError('Semua field harus diisi.');
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      setError('Format email tidak valid.');
       return;
     }
 
@@ -40,21 +33,20 @@ export default function RegisterPage() {
     }
 
     try {
-      // Check if user exists
+      // Check if username already exists
       const { data: existingUser } = await supabase
         .from('users')
         .select('id')
-        .or(`username.eq.${username.trim()},email.eq.${email.trim()}`)
+        .eq('username', username.trim())
         .single();
         
       if (existingUser) {
-        setError('Username atau Email sudah terdaftar.');
+        setError('Username sudah terdaftar.');
         return;
       }
       
       const { error: insertError } = await supabase.from('users').insert([{
         username: username.trim(),
-        email: email.trim(),
         password: password
       }]);
       
@@ -92,17 +84,6 @@ export default function RegisterPage() {
             </div>
           )}
           
-          <div>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-5 py-3.5 rounded-full bg-white border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 outline-none transition-all placeholder:text-slate-400 font-medium text-slate-900 text-sm"
-              placeholder="Alamat Email"
-              required
-            />
-          </div>
-
           <div>
             <input
               type="text"

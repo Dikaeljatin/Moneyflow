@@ -43,12 +43,12 @@ export default function TransactionList({
         return (
         <div
           key={t.id}
-          className="flex items-center gap-4 p-4 rounded-2xl hover:bg-surface-2/60 transition-all duration-300 group animate-fade-in border border-transparent hover:border-border hover:shadow-sm"
+          className="flex items-start gap-3 p-4 rounded-2xl hover:bg-surface-2/60 transition-all duration-300 group animate-fade-in border border-transparent hover:border-border hover:shadow-sm"
           style={{ animationDelay: `${i * 40}ms`, animationFillMode: 'both' }}
         >
           {/* Category Icon */}
           <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-transform duration-300 group-hover:scale-110"
+            className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-transform duration-300 group-hover:scale-110 mt-0.5"
             style={{ backgroundColor: catColor + '15', color: catColor, borderWidth: 2, borderColor: catColor + '30' }}
           >
             <CategoryIcon category={t.category} size={20} />
@@ -56,16 +56,24 @@ export default function TransactionList({
 
           {/* Details */}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-text-primary truncate mb-0.5">
+            <p className="text-sm font-semibold text-text-primary break-words mb-0.5">
               {t.description}
             </p>
             <p className="text-xs text-text-muted font-medium">
               {formatDate(t.date)}
             </p>
+            {/* Amount on mobile */}
+            <p
+              className={`text-sm font-bold mt-1 sm:hidden ${
+                t.type === 'income' ? 'text-accent-green' : 'text-accent-red'
+              }`}
+            >
+              {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
+            </p>
           </div>
 
-          {/* Amount */}
-          <div className="text-right shrink-0">
+          {/* Amount — desktop only */}
+          <div className="hidden sm:block text-right shrink-0">
             <p
               className={`text-base font-bold ${
                 t.type === 'income' ? 'text-accent-green' : 'text-accent-red'
@@ -75,9 +83,9 @@ export default function TransactionList({
             </p>
           </div>
 
-          {/* Actions */}
+          {/* Actions — always visible on mobile, hover-only on desktop */}
           {showActions && (
-            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 shrink-0">
+            <div className="flex gap-1.5 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300">
               {onEdit && (
                 <button
                   onClick={() => onEdit(t)}

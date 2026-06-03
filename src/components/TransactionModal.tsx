@@ -52,9 +52,29 @@ export default function TransactionModal({
 
   const categories = type === 'income' ? allIncomeCategories : allExpenseCategories;
 
+  // Format number with Indonesian dot separator (e.g. 90000 → "90.000")
+  const formatAmountDisplay = (num: number | string): string => {
+    const clean = num.toString().replace(/\D/g, '');
+    if (!clean) return '';
+    return parseInt(clean, 10).toLocaleString('id-ID');
+  };
+
+  // Strip dots and parse to number (e.g. "90.000" → 90000)
+  const parseAmountInput = (val: string): number => {
+    const clean = val.replace(/\./g, '').replace(/,/g, '');
+    return parseFloat(clean) || 0;
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\./g, '').replace(/,/g, '').replace(/\D/g, '');
+    if (raw === '') { setAmount(''); return; }
+    const formatted = parseInt(raw, 10).toLocaleString('id-ID');
+    setAmount(formatted);
+  };
+
   useEffect(() => {
     if (editData) {
-      setAmount(editData.amount.toString());
+      setAmount(formatAmountDisplay(editData.amount));
       setDescription(editData.description);
       setDate(editData.date);
       setCategory(editData.category);
@@ -74,7 +94,7 @@ export default function TransactionModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const numAmount = parseFloat(amount);
+    const numAmount = parseAmountInput(amount);
     if (!numAmount || numAmount <= 0) return;
 
     onSave({
@@ -140,12 +160,12 @@ export default function TransactionModal({
               <span className={`absolute left-4 font-bold text-xl ${type === 'income' ? 'text-emerald-500' : 'text-rose-500'}`}>Rp</span>
               <input
                 id="tx-amount"
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={handleAmountChange}
                 placeholder="0"
                 className={`w-full bg-white border-2 rounded-xl py-3 pl-12 pr-4 text-2xl font-bold outline-none transition-all shadow-sm ${type === 'income' ? 'text-emerald-600 border-emerald-100 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20' : 'text-rose-600 border-rose-100 focus:border-rose-400 focus:ring-4 focus:ring-rose-400/20'}`}
-                min="1"
                 required
                 autoFocus
               />
