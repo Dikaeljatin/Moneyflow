@@ -505,6 +505,16 @@ textarea.input-field {
   font-weight: 700;
 }
 
+/* ─── iOS Safe Area / Sidebar Height ────────────────────────────── */
+
+/* Gunakan dvh (dynamic viewport height) agar sidebar tidak terpotong
+   oleh toolbar Safari di iPhone. Fallback ke svh lalu 100vh. */
+.sidebar-height {
+  height: 100vh;           /* fallback browser lama */
+  height: 100svh;          /* small viewport height (tanpa toolbar) */
+  height: 100dvh;          /* dynamic viewport height (terbaik untuk mobile) */
+}
+
 /* ─── Stagger animation helpers ──────────────────────────────────── */
 
 .stagger-1 { animation-delay: 0.05s; }
