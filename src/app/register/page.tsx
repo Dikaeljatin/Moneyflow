@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AuthBackground from '@/components/AuthBackground';
 import { supabase } from '@/lib/supabase';
@@ -11,7 +10,8 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const router = useRouter();
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [registeredUsername, setRegisteredUsername] = useState('');
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,8 +33,7 @@ export default function RegisterPage() {
     }
 
     try {
-      // Check if username already exists
-      // Use .maybeSingle() instead of .single() to avoid throwing error when not found
+      // Cek apakah username sudah ada
       const { data: existingUser, error: checkError } = await supabase
         .from('users')
         .select('id')
@@ -46,26 +45,30 @@ export default function RegisterPage() {
         setError(`Gagal memeriksa username: ${checkError.message}`);
         return;
       }
-        
+
       if (existingUser) {
         setError('Username sudah terdaftar.');
         return;
       }
-      
+
       const { error: insertError } = await supabase.from('users').insert([{
         username: username.trim(),
         password: password
       }]);
-      
+
       if (insertError) {
         console.error('Insert error:', insertError);
         setError(`Gagal membuat akun: ${insertError.message}`);
         return;
       }
-      
-      localStorage.setItem('moneyflow_authenticated', 'true');
-      localStorage.setItem('moneyflow_username', username.trim());
-      window.location.href = '/dashboard';
+
+      // Tampilkan popup sukses, lalu redirect ke login setelah 3 detik
+      setRegisteredUsername(username.trim());
+      setShowSuccess(true);
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 3000);
+
     } catch (err) {
       console.error('Unexpected error:', err);
       setError('Terjadi kesalahan tak terduga. Coba lagi.');
@@ -74,6 +77,35 @@ export default function RegisterPage() {
 
   return (
     <AuthBackground>
+      {/* ── Popup Sukses ── */}
+      {showSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(6px)' }}>
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-xs w-full text-center animate-slide-up">
+            {/* Ikon centang */}
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-emerald-500/30">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Akun Berhasil Dibuat!</h2>
+            <p className="text-sm text-slate-500 mb-1">Selamat datang,</p>
+            <p className="text-lg font-bold text-slate-800 mb-5">@{registeredUsername}</p>
+            <p className="text-xs text-slate-400 mb-6">Silakan login menggunakan akun yang baru saja Anda daftarkan.</p>
+
+            <button
+              onClick={() => { window.location.href = '/login'; }}
+              className="w-full py-3.5 rounded-full bg-gradient-to-b from-slate-800 to-black text-white font-bold text-sm shadow-[0_8px_20px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_10px_rgba(0,0,0,0.4)] transition-all hover:scale-[0.99] active:scale-95"
+            >
+              Masuk Sekarang
+            </button>
+
+            <p className="text-xs text-slate-400 mt-4">Otomatis menuju login dalam 3 detik...</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Form Register ── */}
       <div className="w-full max-w-sm mx-auto animate-slide-up">
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center text-white mx-auto mb-5 shadow-lg shadow-rose-500/30">
@@ -92,7 +124,7 @@ export default function RegisterPage() {
               {error}
             </div>
           )}
-          
+
           <div>
             <input
               type="text"
@@ -133,7 +165,7 @@ export default function RegisterPage() {
             Daftar Sekarang
           </button>
         </form>
-        
+
         <p className="text-center text-xs text-slate-500 mt-8 font-medium">
           Sudah punya akun?{' '}
           <Link href="/login" className="text-slate-900 font-bold hover:underline">
