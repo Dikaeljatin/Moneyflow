@@ -186,7 +186,10 @@ export default function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="px-5 py-5 border-t border-border bg-gradient-to-br from-surface-2/30 to-white flex flex-col gap-3">
+        <div
+          className="px-5 pt-5 border-t border-border bg-gradient-to-br from-surface-2/30 to-white flex flex-col gap-3"
+          style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}
+        >
           <button 
             onClick={handleLogoutClick}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors text-sm font-semibold border border-red-100"

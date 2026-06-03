@@ -16,6 +16,12 @@ export const metadata: Metadata = {
   keywords: ["keuangan", "manajemen", "pemasukan", "pengeluaran", "tabungan"],
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
