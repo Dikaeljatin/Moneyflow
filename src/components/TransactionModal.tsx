@@ -30,27 +30,43 @@ export default function TransactionModal({
     type === 'income' ? incomeCategories[0] : expenseCategories[0]
   );
   
-  const [customExpenseCategories, setCustomExpenseCategories] = useState<string[]>([]);
-  const [customIncomeCategories, setCustomIncomeCategories] = useState<string[]>([]);
+  const [activeExpenseCategories, setActiveExpenseCategories] = useState<string[]>(expenseCategories);
+  const [activeIncomeCategories, setActiveIncomeCategories] = useState<string[]>(incomeCategories);
 
   // Load custom categories when modal opens
   useEffect(() => {
     if (isOpen) {
-      const saved = localStorage.getItem('moneyflow_custom_categories');
+      const user = localStorage.getItem('moneyflow_username');
+      const key = user ? `moneyflow_custom_categories_${user}` : 'moneyflow_custom_categories';
+      const saved = localStorage.getItem(key);
+      let expCats = [...expenseCategories];
+      let incCats = [...incomeCategories];
+      
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          setCustomExpenseCategories(parsed.filter((c: any) => c.type === 'expense' || !c.type).map((c: any) => c.name));
-          setCustomIncomeCategories(parsed.filter((c: any) => c.type === 'income').map((c: any) => c.name));
+          
+          // First, add all pure custom categories
+          const pureCustomExp = parsed.filter((c: any) => (c.type === 'expense' || !c.type) && c.isCustom).map((c: any) => c.name);
+          const pureCustomInc = parsed.filter((c: any) => c.type === 'income' && c.isCustom).map((c: any) => c.name);
+          
+          expCats = [...expCats, ...pureCustomExp];
+          incCats = [...incCats, ...pureCustomInc];
+          
+          // Then filter out any (default or custom) that are disabled
+          const disabledNames = parsed.filter((c: any) => c.isEnabled === false).map((c: any) => c.name);
+          
+          expCats = expCats.filter(name => !disabledNames.includes(name));
+          incCats = incCats.filter(name => !disabledNames.includes(name));
         } catch (e) {}
       }
+      
+      setActiveExpenseCategories(expCats);
+      setActiveIncomeCategories(incCats);
     }
   }, [isOpen, type]);
 
-  const allIncomeCategories = [...incomeCategories, ...customIncomeCategories];
-  const allExpenseCategories = [...expenseCategories, ...customExpenseCategories];
-
-  const categories = type === 'income' ? allIncomeCategories : allExpenseCategories;
+  const categories = type === 'income' ? activeIncomeCategories : activeExpenseCategories;
 
   // Format number with Indonesian dot separator (e.g. 90000 → "90.000")
   const formatAmountDisplay = (num: number | string): string => {
@@ -82,13 +98,13 @@ export default function TransactionModal({
       setAmount('');
       setDescription('');
       setDate(getToday());
-      // Re-initialize category taking custom ones into account
+      // Re-initialize category taking active ones into account
       const defaultCat = type === 'income' 
-        ? allIncomeCategories[0] 
-        : allExpenseCategories[0];
+        ? activeIncomeCategories[0] 
+        : activeExpenseCategories[0];
       setCategory(defaultCat);
     }
-  }, [editData, type, isOpen, customExpenseCategories, customIncomeCategories]);
+  }, [editData, type, isOpen, activeExpenseCategories, activeIncomeCategories]);
 
   if (!isOpen) return null;
 

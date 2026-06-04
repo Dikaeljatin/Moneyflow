@@ -24,12 +24,44 @@ export default function IncomePage() {
     data: null,
   });
 
+  const currentYear = new Date().getFullYear();
+  const currentMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
+  
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonth);
+  const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
+
+  const months = [
+    { value: '01', label: 'Januari' },
+    { value: '02', label: 'Februari' },
+    { value: '03', label: 'Maret' },
+    { value: '04', label: 'April' },
+    { value: '05', label: 'Mei' },
+    { value: '06', label: 'Juni' },
+    { value: '07', label: 'Juli' },
+    { value: '08', label: 'Agustus' },
+    { value: '09', label: 'September' },
+    { value: '10', label: 'Oktober' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'Desember' },
+  ];
+
+  const years: string[] = [];
+  for (let y = currentYear; y >= currentYear - 5; y--) {
+    years.push(y.toString());
+  }
+
   const incomeTransactions = useMemo(() => {
     let filtered = transactions.filter((t) => t.type === 'income');
+    
+    filtered = filtered.filter(t => {
+      const parts = t.date.split('-');
+      return parts.length >= 2 && parts[0] === selectedYear && parts[1] === selectedMonth;
+    });
+
     return filtered.sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
-  }, [transactions]);
+  }, [transactions, selectedMonth, selectedYear]);
 
   const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
 
@@ -108,6 +140,29 @@ export default function IncomePage() {
         >
           <span>+</span> Tambah Pemasukan
         </button>
+      </div>
+
+      {/* Filter Row */}
+      <div className="flex items-center justify-end">
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-text-secondary">Bulan:</label>
+          <select 
+            value={selectedMonth} 
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="px-3 py-1.5 rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none text-sm text-slate-700 bg-white shadow-sm"
+          >
+            {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+          
+          <label className="text-sm font-medium text-text-secondary ml-2">Tahun:</label>
+          <select 
+            value={selectedYear} 
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="px-3 py-1.5 rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none text-sm text-slate-700 bg-white shadow-sm"
+          >
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* Summary + Filter */}

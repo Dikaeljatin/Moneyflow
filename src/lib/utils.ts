@@ -89,7 +89,26 @@ const categoryColors: Record<Category, string> = {
 };
 
 export function getCategoryColor(category: Category): string {
-  return categoryColors[category] || '#94a3b8';
+  if (typeof window !== 'undefined') {
+    const user = localStorage.getItem('moneyflow_username');
+    const key = user ? `moneyflow_custom_categories_${user}` : 'moneyflow_custom_categories';
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const customCat = parsed.find((c: any) => c.name === category);
+        if (customCat && customCat.color) {
+          return customCat.color;
+        }
+      } catch (e) {}
+    }
+  }
+
+  if (categoryColors[category]) {
+    return categoryColors[category];
+  }
+
+  return '#94a3b8';
 }
 
 // ─── Income & Expense Categories ───────────────────────────────────

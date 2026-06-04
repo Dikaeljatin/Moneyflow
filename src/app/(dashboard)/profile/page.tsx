@@ -38,6 +38,7 @@ interface CustomCategory {
   color: string;
   isCustom: boolean;
   type: 'income' | 'expense';
+  isEnabled?: boolean;
 }
 
 const DEFAULT_EXPENSE_CATEGORIES: CustomCategory[] = [
@@ -73,11 +74,15 @@ export default function ProfilePage() {
   const [newCatIcon, setNewCatIcon] = useState('');
   const [newCatColor, setNewCatColor] = useState('#136f2b');
   const [categoryToDelete, setCategoryToDelete] = useState<CustomCategory | null>(null);
+  const [categoryToEdit, setCategoryToEdit] = useState<CustomCategory | null>(null);
+  const [editCatColor, setEditCatColor] = useState('');
+  const [editCatEnabled, setEditCatEnabled] = useState(true);
 
   useEffect(() => {
     const storedUsername = localStorage.getItem('moneyflow_username') || '';
     setUsername(storedUsername);
-    const savedCats = localStorage.getItem('moneyflow_custom_categories');
+    const key = storedUsername ? `moneyflow_custom_categories_${storedUsername}` : 'moneyflow_custom_categories';
+    const savedCats = localStorage.getItem(key);
     if (savedCats) {
       try { setCustomCategories(JSON.parse(savedCats)); } catch (e) {}
     }
@@ -144,14 +149,94 @@ export default function ProfilePage() {
     };
     const updated = [...customCategories, newCat];
     setCustomCategories(updated);
-    localStorage.setItem('moneyflow_custom_categories', JSON.stringify(updated));
+    const key = username ? `moneyflow_custom_categories_${username}` : 'moneyflow_custom_categories';
+    localStorage.setItem(key, JSON.stringify(updated));
     setNewCatName(''); setNewCatIcon('');
     setNewCatColor(categoryType === 'income' ? '#10b981' : '#136f2b');
   };
 
+  const openEditCategory = (cat: CustomCategory) => {
+    setCategoryToEdit(cat);
+    setEditCatColor(cat.color);
+    setEditCatEnabled(cat.isEnabled !== false);
+  };
+
+  const saveEditCategory = () => {
+    if (!categoryToEdit) return;
+    
+    const existingIndex = customCategories.findIndex(c => c.name === categoryToEdit.name);
+    let updated = [...customCategories];
+    
+    if (existingIndex >= 0) {
+      updated[existingIndex] = { 
+        ...updated[existingIndex], 
+        color: editCatColor, 
+        isEnabled: editCatEnabled 
+      };
+    } else {
+      updated.push({
+        ...categoryToEdit,
+        color: editCatColor,
+        isEnabled: editCatEnabled
+      });
+    }
+    
+    setCustomCategories(updated);
+    const key = username ? `moneyflow_custom_categories_${username}` : 'moneyflow_custom_categories';
+    localStorage.setItem(key, JSON.stringify(updated));
+    setCategoryToEdit(null);
+  };
+
   const initial = username ? username.charAt(0).toUpperCase() : 'U';
-  const displayedDefaultCategories = [...DEFAULT_EXPENSE_CATEGORIES, ...DEFAULT_INCOME_CATEGORIES];
-  const totalCategories = displayedDefaultCategories.length + customCategories.length;
+  
+  // Merge default categories with their overrides
+  const displayedDefaultCategories = [...DEFAULT_EXPENSE_CATEGORIES, ...DEFAULT_INCOME_CATEGORIES].map(defCat => {
+    const override = customCategories.find(c => c.name === defCat.name);
+    return override ? { ...defCat, ...override } : defCat;
+  });
+  
+  const pureCustomCategories = customCategories.filter(c => c.isCustom);
+  const allCategories = [...displayedDefaultCategories, ...pureCustomCategories];
+  const expenseCategoriesList = allCategories.filter(c => c.type === 'expense');
+  const incomeCategoriesList = allCategories.filter(c => c.type === 'income');
+  
+  const renderCategory = (cat: CustomCategory, idx: number) => (
+    <div key={idx} className={`flex items-center justify-between p-5 hover:bg-slate-50 transition-colors group ${cat.isEnabled === false ? 'opacity-50' : ''}`}>
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-sm" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}>
+          {cat.icon || <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.color }} />}
+        </div>
+        <div>
+          <p className={`text-base font-semibold leading-tight ${cat.isEnabled === false ? 'text-slate-500 line-through' : 'text-slate-800'}`}>{cat.name}</p>
+          <div className="mt-1 flex items-center gap-2">
+            {cat.type === 'income' ? (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 tracking-wider">PEMASUKAN</span>
+            ) : (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-600 tracking-wider">PENGELUARAN</span>
+            )}
+            {cat.isCustom ? (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600 tracking-wider">KUSTOM</span>
+            ) : (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 tracking-wider">BAWAAN</span>
+            )}
+            {cat.isEnabled === false && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-500 tracking-wider">NONAKTIF</span>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+        <button onClick={() => openEditCategory(cat)} className="text-slate-400 hover:text-blue-500 transition-colors p-2 rounded-lg hover:bg-blue-50">
+          <EditIcon size={18} />
+        </button>
+        {cat.isCustom && (
+          <button onClick={() => setCategoryToDelete(cat)} className="text-slate-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-12">
@@ -281,41 +366,25 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+          {/* Daftar Kategori Pengeluaran */}
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-6">
             <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-lg font-bold text-slate-900">Daftar kategori</h3>
-              <p className="text-sm text-slate-500">{totalCategories} kategori</p>
+              <h3 className="text-lg font-bold text-slate-900">Kategori Pengeluaran</h3>
+              <p className="text-sm text-slate-500">{expenseCategoriesList.length} kategori</p>
             </div>
             <div className="divide-y divide-slate-100/80">
-              {[...displayedDefaultCategories, ...customCategories].map((cat, idx) => (
-                <div key={idx} className="flex items-center justify-between p-5 hover:bg-slate-50 transition-colors group">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-sm" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}>
-                      {cat.icon || <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.color }} />}
-                    </div>
-                    <div>
-                      <p className="text-base font-semibold text-slate-800 leading-tight">{cat.name}</p>
-                      <div className="mt-1 flex items-center gap-2">
-                        {cat.type === 'income' ? (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 tracking-wider">PEMASUKAN</span>
-                        ) : (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-600 tracking-wider">PENGELUARAN</span>
-                        )}
-                        {cat.isCustom ? (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600 tracking-wider">KUSTOM</span>
-                        ) : (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 tracking-wider">BAWAAN</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {cat.isCustom && (
-                    <button onClick={() => setCategoryToDelete(cat)} className="text-slate-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                    </button>
-                  )}
-                </div>
-              ))}
+              {expenseCategoriesList.map((cat, idx) => renderCategory(cat, idx))}
+            </div>
+          </div>
+
+          {/* Daftar Kategori Pemasukan */}
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="text-lg font-bold text-slate-900">Kategori Pemasukan</h3>
+              <p className="text-sm text-slate-500">{incomeCategoriesList.length} kategori</p>
+            </div>
+            <div className="divide-y divide-slate-100/80">
+              {incomeCategoriesList.map((cat, idx) => renderCategory(cat, idx))}
             </div>
           </div>
         </div>
@@ -358,11 +427,52 @@ export default function ProfilePage() {
                 onClick={() => {
                   const updated = customCategories.filter(c => c.name !== categoryToDelete.name);
                   setCustomCategories(updated);
-                  localStorage.setItem('moneyflow_custom_categories', JSON.stringify(updated));
+                  const key = username ? `moneyflow_custom_categories_${username}` : 'moneyflow_custom_categories';
+                  localStorage.setItem(key, JSON.stringify(updated));
                   setCategoryToDelete(null);
                 }}
                 className="flex-1 px-4 py-2.5 rounded-xl font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-sm shadow-red-500/30"
               >Hapus</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL EDIT KATEGORI ── */}
+      {categoryToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-slide-up border border-slate-100">
+            <h3 className="text-xl font-bold text-slate-900 mb-1">Edit Kategori</h3>
+            <p className="text-sm text-slate-500 mb-5">Edit preferensi untuk <strong>{categoryToEdit.name}</strong>.</p>
+            
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Warna di grafik</label>
+                <div className="flex gap-3">
+                  <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border border-slate-200 shadow-sm cursor-pointer">
+                    <input type="color" value={editCatColor} onChange={(e) => setEditCatColor(e.target.value)} className="absolute -inset-4 w-24 h-24 cursor-pointer" />
+                  </div>
+                  <input type="text" value={editCatColor} onChange={(e) => setEditCatColor(e.target.value)} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all font-mono" />
+                </div>
+              </div>
+              
+              <label className="flex items-center justify-between cursor-pointer p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
+                <div>
+                  <span className="block text-sm font-semibold text-slate-800">Aktifkan Kategori</span>
+                  <span className="block text-xs text-slate-500 mt-0.5">Tampil saat tambah transaksi baru</span>
+                </div>
+                <div className="relative">
+                  <input type="checkbox" checked={editCatEnabled} onChange={(e) => setEditCatEnabled(e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                </div>
+              </label>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setCategoryToEdit(null)} className="flex-1 py-2.5 rounded-xl font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors">Batal</button>
+              <button onClick={saveEditCategory} className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors shadow-sm shadow-green-500/30">
+                Simpan
+              </button>
             </div>
           </div>
         </div>
