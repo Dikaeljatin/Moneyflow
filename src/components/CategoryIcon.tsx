@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { Category } from '@/lib/types';
+import { useFinance } from '@/lib/store';
 
 interface CategoryIconProps {
   category: Category;
@@ -20,6 +21,7 @@ const defaultIcons: Record<string, string> = {
 };
 
 export default function CategoryIcon({ category, size = 20, className = '' }: CategoryIconProps) {
+  const { customCategories } = useFinance();
   const [icon, setIcon] = useState<string>(defaultIcons[category as string] || '📁');
 
   useEffect(() => {
@@ -28,17 +30,11 @@ export default function CategoryIcon({ category, size = 20, className = '' }: Ca
       return;
     }
 
-    const saved = localStorage.getItem('moneyflow_custom_categories');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const customCat = parsed.find((c: any) => c.name === category);
-        if (customCat && customCat.icon) {
-          setIcon(customCat.icon);
-        }
-      } catch (e) {}
+    const customCat = customCategories.find((c) => c.name === category);
+    if (customCat && customCat.icon) {
+      setIcon(customCat.icon);
     }
-  }, [category]);
+  }, [category, customCategories]);
 
   return (
     <span style={{ fontSize: `${size * 0.8}px`, lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} className={className}>

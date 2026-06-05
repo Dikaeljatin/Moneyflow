@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useFinance } from '@/lib/store';
+import { CustomCategory } from '@/lib/types';
 
 // --- SVG Icons ---
 const UserIcon = ({ size = 24, className = '' }) => (
@@ -32,14 +34,7 @@ const LockIcon = ({ size = 18 }) => (
   </svg>
 );
 
-interface CustomCategory {
-  name: string;
-  icon: string;
-  color: string;
-  isCustom: boolean;
-  type: 'income' | 'expense';
-  isEnabled?: boolean;
-}
+
 
 const DEFAULT_EXPENSE_CATEGORIES: CustomCategory[] = [
   { name: 'Nongkrong', icon: '☕', color: '#8b5cf6', isCustom: false, type: 'expense' },
@@ -68,7 +63,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
 
   // Personalisasi State
-  const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
+  const { customCategories, addCustomCategory, updateCustomCategory, deleteCustomCategory } = useFinance();
   const [categoryType, setCategoryType] = useState<'expense' | 'income'>('expense');
   const [newCatName, setNewCatName] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('');
@@ -81,11 +76,6 @@ export default function ProfilePage() {
   useEffect(() => {
     const storedUsername = localStorage.getItem('moneyflow_username') || '';
     setUsername(storedUsername);
-    const key = storedUsername ? `moneyflow_custom_categories_${storedUsername}` : 'moneyflow_custom_categories';
-    const savedCats = localStorage.getItem(key);
-    if (savedCats) {
-      try { setCustomCategories(JSON.parse(savedCats)); } catch (e) {}
-    }
   }, []);
 
   const openEdit = (mode: 'password') => {
@@ -143,14 +133,11 @@ export default function ProfilePage() {
     if (!newCatName.trim()) return;
     const isValidHex = /^#([0-9A-F]{3}){1,2}$/i.test(newCatColor);
     const finalColor = isValidHex ? newCatColor : '#136f2b';
-    const newCat: CustomCategory = {
+    const newCat: Omit<CustomCategory, 'id' | 'createdAt'> = {
       name: newCatName.trim(), icon: newCatIcon.trim(),
       color: finalColor, isCustom: true, type: categoryType
     };
-    const updated = [...customCategories, newCat];
-    setCustomCategories(updated);
-    const key = username ? `moneyflow_custom_categories_${username}` : 'moneyflow_custom_categories';
-    localStorage.setItem(key, JSON.stringify(updated));
+    addCustomCategory(newCat);
     setNewCatName(''); setNewCatIcon('');
     setNewCatColor(categoryType === 'income' ? '#10b981' : '#136f2b');
   };
@@ -164,26 +151,22 @@ export default function ProfilePage() {
   const saveEditCategory = () => {
     if (!categoryToEdit) return;
     
-    const existingIndex = customCategories.findIndex(c => c.name === categoryToEdit.name);
-    let updated = [...customCategories];
-    
-    if (existingIndex >= 0) {
-      updated[existingIndex] = { 
-        ...updated[existingIndex], 
+    if (categoryToEdit.id) {
+      updateCustomCategory(categoryToEdit.id, { 
         color: editCatColor, 
         isEnabled: editCatEnabled 
-      };
+      });
     } else {
-      updated.push({
-        ...categoryToEdit,
+      addCustomCategory({
+        name: categoryToEdit.name,
+        icon: categoryToEdit.icon,
         color: editCatColor,
+        isCustom: false,
+        type: categoryToEdit.type,
         isEnabled: editCatEnabled
       });
     }
     
-    setCustomCategories(updated);
-    const key = username ? `moneyflow_custom_categories_${username}` : 'moneyflow_custom_categories';
-    localStorage.setItem(key, JSON.stringify(updated));
     setCategoryToEdit(null);
   };
 
@@ -425,10 +408,9 @@ export default function ProfilePage() {
               <button onClick={() => setCategoryToDelete(null)} className="flex-1 px-4 py-2.5 rounded-xl font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors">Batal</button>
               <button
                 onClick={() => {
-                  const updated = customCategories.filter(c => c.name !== categoryToDelete.name);
-                  setCustomCategories(updated);
-                  const key = username ? `moneyflow_custom_categories_${username}` : 'moneyflow_custom_categories';
-                  localStorage.setItem(key, JSON.stringify(updated));
+                  if (categoryToDelete?.id) {
+                    deleteCustomCategory(categoryToDelete.id);
+                  }
                   setCategoryToDelete(null);
                 }}
                 className="flex-1 px-4 py-2.5 rounded-xl font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-sm shadow-red-500/30"

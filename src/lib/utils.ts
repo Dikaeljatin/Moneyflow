@@ -7,6 +7,7 @@ import {
   CategoryData,
   IncomeCategory,
   ExpenseCategory,
+  CustomCategory,
 } from './types';
 
 // ─── Currency Formatting ───────────────────────────────────────────
@@ -88,20 +89,10 @@ const categoryColors: Record<Category, string> = {
   Hiburan: '#8b5cf6',
 };
 
-export function getCategoryColor(category: Category): string {
-  if (typeof window !== 'undefined') {
-    const user = localStorage.getItem('moneyflow_username');
-    const key = user ? `moneyflow_custom_categories_${user}` : 'moneyflow_custom_categories';
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const customCat = parsed.find((c: any) => c.name === category);
-        if (customCat && customCat.color) {
-          return customCat.color;
-        }
-      } catch (e) {}
-    }
+export function getCategoryColor(category: Category, customCategories: CustomCategory[] = []): string {
+  const customCat = customCategories.find((c) => c.name === category);
+  if (customCat && customCat.color) {
+    return customCat.color;
   }
 
   if (categoryColors[category]) {
@@ -166,7 +157,8 @@ export function getMonthlyData(
 
 export function getCategoryBreakdown(
   transactions: Transaction[],
-  type: 'income' | 'expense'
+  type: 'income' | 'expense',
+  customCategories: CustomCategory[] = []
 ): CategoryData[] {
   const filtered = transactions.filter((t) => t.type === type);
   const total = filtered.reduce((sum, t) => sum + t.amount, 0);
@@ -181,7 +173,7 @@ export function getCategoryBreakdown(
       category: category as Category,
       amount,
       percentage: total > 0 ? (amount / total) * 100 : 0,
-      color: getCategoryColor(category as Category),
+      color: getCategoryColor(category as Category, customCategories),
     }))
     .filter(data => data.amount > 0)
     .sort((a, b) => b.amount - a.amount);

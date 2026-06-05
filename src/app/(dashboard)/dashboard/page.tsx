@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const {
     transactions,
     goals,
+    customCategories,
     isLoaded,
     totalBalance,
     monthlyIncome,
@@ -60,8 +61,8 @@ export default function DashboardPage() {
     });
   }
 
-  const expenseBreakdown = getCategoryBreakdown(filteredTransactions, 'expense');
-  const incomeBreakdown = getCategoryBreakdown(filteredTransactions, 'income');
+  const expenseBreakdown = getCategoryBreakdown(filteredTransactions, 'expense', customCategories);
+  const incomeBreakdown = getCategoryBreakdown(filteredTransactions, 'income', customCategories);
 
   const periodIncome = filteredTransactions
     .filter(t => t.type === 'income')

@@ -7,6 +7,7 @@ import {
   expenseCategories,
   getToday,
 } from '@/lib/utils';
+import { useFinance } from '@/lib/store';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -33,38 +34,31 @@ export default function TransactionModal({
   const [activeExpenseCategories, setActiveExpenseCategories] = useState<string[]>(expenseCategories);
   const [activeIncomeCategories, setActiveIncomeCategories] = useState<string[]>(incomeCategories);
 
+  const { customCategories } = useFinance();
+
   // Load custom categories when modal opens
   useEffect(() => {
     if (isOpen) {
-      const user = localStorage.getItem('moneyflow_username');
-      const key = user ? `moneyflow_custom_categories_${user}` : 'moneyflow_custom_categories';
-      const saved = localStorage.getItem(key);
       let expCats = [...expenseCategories];
       let incCats = [...incomeCategories];
       
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          
-          // First, add all pure custom categories
-          const pureCustomExp = parsed.filter((c: any) => (c.type === 'expense' || !c.type) && c.isCustom).map((c: any) => c.name);
-          const pureCustomInc = parsed.filter((c: any) => c.type === 'income' && c.isCustom).map((c: any) => c.name);
-          
-          expCats = [...expCats, ...pureCustomExp];
-          incCats = [...incCats, ...pureCustomInc];
-          
-          // Then filter out any (default or custom) that are disabled
-          const disabledNames = parsed.filter((c: any) => c.isEnabled === false).map((c: any) => c.name);
-          
-          expCats = expCats.filter(name => !disabledNames.includes(name));
-          incCats = incCats.filter(name => !disabledNames.includes(name));
-        } catch (e) {}
-      }
+      // First, add all pure custom categories
+      const pureCustomExp = customCategories.filter((c) => (c.type === 'expense' || !c.type) && c.isCustom).map((c) => c.name);
+      const pureCustomInc = customCategories.filter((c) => c.type === 'income' && c.isCustom).map((c) => c.name);
+      
+      expCats = [...expCats, ...pureCustomExp];
+      incCats = [...incCats, ...pureCustomInc];
+      
+      // Then filter out any (default or custom) that are disabled
+      const disabledNames = customCategories.filter((c) => c.isEnabled === false).map((c) => c.name);
+      
+      expCats = expCats.filter(name => !disabledNames.includes(name));
+      incCats = incCats.filter(name => !disabledNames.includes(name));
       
       setActiveExpenseCategories(expCats);
       setActiveIncomeCategories(incCats);
     }
-  }, [isOpen, type]);
+  }, [isOpen, type, customCategories]);
 
   const categories = type === 'income' ? activeIncomeCategories : activeExpenseCategories;
 

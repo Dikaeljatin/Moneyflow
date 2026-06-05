@@ -8,7 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
-import { Transaction, FinancialGoal } from './types';
+import { Transaction, FinancialGoal, CustomCategory } from './types';
 import { filterByCurrentMonth } from './utils';
 import { supabase } from './supabase';
 
@@ -27,6 +27,21 @@ function dbGoalToApp(row: any): FinancialGoal {
     color: row.color ?? '',
     createdAt: row.createdat ?? row.createdAt ?? '',
     username: row.username ?? '',
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function dbCategoryToApp(row: any): CustomCategory {
+  return {
+    id: row.id,
+    name: row.name,
+    icon: row.icon ?? '',
+    color: row.color ?? '',
+    isCustom: row.iscustom ?? row.isCustom ?? true,
+    type: row.type,
+    isEnabled: row.isenabled ?? row.isEnabled ?? true,
+    username: row.username ?? '',
+    createdAt: row.createdat ?? row.createdAt ?? '',
   };
 }
 
@@ -55,6 +70,18 @@ function goalToDb(g: Partial<FinancialGoal>): Record<string, unknown> {
   return row;
 }
 
+function categoryToDb(c: Partial<CustomCategory>): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  if (c.name !== undefined) row.name = c.name;
+  if (c.icon !== undefined) row.icon = c.icon;
+  if (c.color !== undefined) row.color = c.color;
+  if (c.isCustom !== undefined) row.iscustom = c.isCustom;
+  if (c.type !== undefined) row.type = c.type;
+  if (c.isEnabled !== undefined) row.isenabled = c.isEnabled;
+  if (c.username !== undefined) row.username = c.username;
+  return row;
+}
+
 function txToDb(t: Partial<Transaction>): Record<string, unknown> {
   const row: Record<string, unknown> = {};
   if (t.type !== undefined) row.type = t.type;
@@ -72,6 +99,7 @@ interface FinanceContextType {
   // Data
   transactions: Transaction[];
   goals: FinancialGoal[];
+  customCategories: CustomCategory[];
   isLoaded: boolean;
   currentUser: string | null;
 
@@ -92,6 +120,11 @@ interface FinanceContextType {
   updateGoal: (id: string, g: Partial<FinancialGoal>) => void;
   deleteGoal: (id: string) => void;
   addToGoal: (id: string, amount: number) => void;
+
+  // Custom Category CRUD
+  addCustomCategory: (c: Omit<CustomCategory, 'id' | 'createdAt'>) => void;
+  updateCustomCategory: (id: string, c: Partial<CustomCategory>) => void;
+  deleteCustomCategory: (id: string) => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | null>(null);
@@ -99,6 +132,7 @@ const FinanceContext = createContext<FinanceContextType | null>(null);
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
+  const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
 
@@ -115,14 +149,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     Promise.all([
       supabase.from('transactions').select('*').eq('username', username).order('date', { ascending: false }),
-      supabase.from('goals').select('*').eq('username', username).order('createdat', { ascending: true })
+      supabase.from('goals').select('*').eq('username', username).order('createdat', { ascending: true }),
+      supabase.from('custom_categories').select('*').eq('username', username).order('createdat', { ascending: true })
     ])
-      .then(([{ data: txData, error: txError }, { data: goalsData, error: goalsError }]) => {
+      .then(([{ data: txData, error: txError }, { data: goalsData, error: goalsError }, { data: catsData, error: catsError }]) => {
         if (txError) console.error('Failed to load transactions:', txError);
         if (goalsError) console.error('Failed to load goals:', goalsError);
+        if (catsError) console.error('Failed to load custom categories:', catsError);
 
         setTransactions((txData || []).map(dbTxToApp));
         setGoals((goalsData || []).map(dbGoalToApp));
+        setCustomCategories((catsData || []).map(dbCategoryToApp));
         setIsLoaded(true);
       })
       .catch(e => {
@@ -262,6 +299,51 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   }, [goals]);
 
+  // ─── Custom Category CRUD ────────────────────────────────────────
+
+  const addCustomCategory = useCallback(
+    async (c: Omit<CustomCategory, 'id' | 'createdAt'>) => {
+      if (!currentUser) return;
+      try {
+        const dbRow = categoryToDb({ ...c, username: currentUser });
+        const { data, error } = await supabase.from('custom_categories').insert([dbRow]).select().single();
+        if (error) throw error;
+        if (data) {
+          setCustomCategories((prev) => [...prev, dbCategoryToApp(data)]);
+        }
+      } catch (e) {
+        console.error('Failed to add custom category:', e);
+      }
+    },
+    [currentUser]
+  );
+
+  const updateCustomCategory = useCallback(
+    async (id: string, updates: Partial<CustomCategory>) => {
+      setCustomCategories((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
+      );
+      try {
+        const dbRow = categoryToDb(updates);
+        const { error } = await supabase.from('custom_categories').update(dbRow).eq('id', id);
+        if (error) throw error;
+      } catch (e) {
+        console.error('Failed to update custom category:', e);
+      }
+    },
+    []
+  );
+
+  const deleteCustomCategory = useCallback(async (id: string) => {
+    setCustomCategories((prev) => prev.filter((c) => c.id !== id));
+    try {
+      const { error } = await supabase.from('custom_categories').delete().eq('id', id);
+      if (error) throw error;
+    } catch (e) {
+      console.error('Failed to delete custom category:', e);
+    }
+  }, []);
+
   // ─── Context Value ─────────────────────────────────────────────
 
   const value: FinanceContextType = {
@@ -281,6 +363,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     updateGoal,
     deleteGoal,
     addToGoal,
+    customCategories,
+    addCustomCategory,
+    updateCustomCategory,
+    deleteCustomCategory,
   };
 
   return (

@@ -3,6 +3,7 @@
 import { Transaction } from '@/lib/types';
 import { formatCurrency, formatDate, getCategoryColor } from '@/lib/utils';
 import CategoryIcon from '@/components/CategoryIcon';
+import { useFinance } from '@/lib/store';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -19,6 +20,7 @@ export default function TransactionList({
   onEdit,
   onDelete,
 }: TransactionListProps) {
+  const { customCategories } = useFinance();
   const items = limit ? transactions.slice(0, limit) : transactions;
 
   if (items.length === 0) {
@@ -39,7 +41,7 @@ export default function TransactionList({
   return (
     <div className="space-y-2">
       {items.map((t, i) => {
-        const catColor = getCategoryColor(t.category);
+        const catColor = getCategoryColor(t.category, customCategories);
         return (
         <div
           key={t.id}

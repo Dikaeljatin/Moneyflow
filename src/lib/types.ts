@@ -58,3 +58,15 @@ export interface DateRange {
   start: string;
   end: string;
 }
+
+export interface CustomCategory {
+  id?: string;
+  name: string;
+  icon: string;
+  color: string;
+  isCustom: boolean;
+  type: 'income' | 'expense';
+  isEnabled?: boolean;
+  username?: string;
+  createdAt?: string;
+}
