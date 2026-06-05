@@ -147,25 +147,60 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    Promise.all([
-      supabase.from('transactions').select('*').eq('username', username).order('date', { ascending: false }),
-      supabase.from('goals').select('*').eq('username', username).order('createdat', { ascending: true }),
-      supabase.from('custom_categories').select('*').eq('username', username).order('createdat', { ascending: true })
-    ])
-      .then(([{ data: txData, error: txError }, { data: goalsData, error: goalsError }, { data: catsData, error: catsError }]) => {
-        if (txError) console.error('Failed to load transactions:', txError);
-        if (goalsError) console.error('Failed to load goals:', goalsError);
-        if (catsError) console.error('Failed to load custom categories:', catsError);
+    const migrateLocalCategories = async () => {
+      try {
+        const localKey = `moneyflow_custom_categories_${username}`;
+        const localFallbackKey = 'moneyflow_custom_categories';
+        const localDataStr = localStorage.getItem(localKey) || localStorage.getItem(localFallbackKey);
+        
+        if (localDataStr) {
+          const localCats = JSON.parse(localDataStr);
+          if (Array.isArray(localCats) && localCats.length > 0) {
+            // Check if there are already records to avoid duplicates
+            const { data: existing } = await supabase
+              .from('custom_categories')
+              .select('id')
+              .eq('username', username)
+              .limit(1);
+              
+            if (!existing || existing.length === 0) {
+              const rowsToInsert = localCats.map((c: any) => categoryToDb({ 
+                ...c, 
+                username, 
+                isCustom: c.isCustom !== false 
+              }));
+              await supabase.from('custom_categories').insert(rowsToInsert);
+            }
+          }
+          // Always clear so it doesn't run again
+          localStorage.removeItem(localKey);
+          localStorage.removeItem(localFallbackKey);
+        }
+      } catch (e) {
+        console.error('Failed to migrate local categories:', e);
+      }
+    };
 
-        setTransactions((txData || []).map(dbTxToApp));
-        setGoals((goalsData || []).map(dbGoalToApp));
-        setCustomCategories((catsData || []).map(dbCategoryToApp));
-        setIsLoaded(true);
-      })
-      .catch(e => {
-        console.error('Failed to load from Supabase:', e);
-        setIsLoaded(true);
-      });
+    const loadData = async () => {
+      await migrateLocalCategories();
+
+      const [txRes, goalsRes, catsRes] = await Promise.all([
+        supabase.from('transactions').select('*').eq('username', username).order('date', { ascending: false }),
+        supabase.from('goals').select('*').eq('username', username).order('createdat', { ascending: true }),
+        supabase.from('custom_categories').select('*').eq('username', username).order('createdat', { ascending: true })
+      ]);
+
+      if (txRes.error) console.error('Failed to load transactions:', txRes.error);
+      if (goalsRes.error) console.error('Failed to load goals:', goalsRes.error);
+      if (catsRes.error) console.error('Failed to load custom categories:', catsRes.error);
+
+      setTransactions((txRes.data || []).map(dbTxToApp));
+      setGoals((goalsRes.data || []).map(dbGoalToApp));
+      setCustomCategories((catsRes.data || []).map(dbCategoryToApp));
+      setIsLoaded(true);
+    };
+
+    loadData();
   }, []);
 
   // ─── Computed Values ───────────────────────────────────────────

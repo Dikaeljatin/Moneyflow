@@ -6,18 +6,19 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function test() {
-  const { data, error } = await supabase.from('categories').select('*').limit(1);
-  if (error) {
-    console.error('categories table error:', error);
-  } else {
-    console.log('categories table exists! Data:', data);
-  }
+  const { data, error } = await supabase.from('custom_categories').insert([{
+    name: 'TestCategory',
+    icon: '🚀',
+    color: '#000000',
+    iscustom: true,
+    type: 'expense',
+    username: 'test_user'
+  }]).select().single();
   
-  const { data: d2, error: e2 } = await supabase.from('custom_categories').select('*').limit(1);
-  if (e2) {
-    console.error('custom_categories table error:', e2);
+  if (error) {
+    console.error('Insert error details:', JSON.stringify(error, null, 2));
   } else {
-    console.log('custom_categories table exists! Data:', d2);
+    console.log('Insert success!', data);
   }
 }
 
